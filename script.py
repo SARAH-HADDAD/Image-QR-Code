@@ -65,11 +65,6 @@ def encode(image, file_name='compressed_image.txt', bits=15):
     # Hexa encoding
     with open(file_name,"w") as file:
         hexa_encoded = "".join(map(lambda x: "{0:04x}".format(x[0])+"".join(map(lambda y: "{0:02x}".format(y), x[1])), count_list))
-        """ hexa_encoded = ""
-        for count, colors in count_list:
-            hexa_encoded += "{0:04x}".format(count)
-            for color in colors:
-                hexa_encoded += "{0:02x}".format(color) """
         file.write(hexa_encoded)
         file.close()
 
@@ -78,35 +73,33 @@ def encode(image, file_name='compressed_image.txt', bits=15):
     
     return hexa_encoded, rate
 
-def decode(height, width, code, bits=15):
-
+def decode(code, bits=15):
     # Loop through the code and get the color of the pixels
     size = 2**(bits+1) - 2**bits 
     i = 0
     data = []
+
     while i < len(code):
         count = code[i:i+4]
         count = int(count, 16)
         i += 4
-        if count > size: 
+
+        if count > size: # The most significant bit is set to 1
             # Here the color is repeated 3 times or more
             count -= size
             color = code[i:i+2]
             color = int(color, 16)            
             data += [color]*count
             i += 2
-        else: 
+
+        else: # The most significant bit is set to 0
             # Here each color is repeated less than 3 times
             color_seq = code[i:i+count*2]
             colors = [int(color_seq[idx:idx+2], 16) for idx in range(0, len(color_seq), 2)]
             data += colors
             i += count*2
 
-    image = np.zeros((height, width)).astype(np.uint8)
-    for k, (i, j) in enumerate(itertools.product(range(height), range(width))):
-        image[i, j] = data[k]
-
-    return image
+    return data
 
 
 def QrCodeGeneration(encoded):
@@ -114,23 +107,25 @@ def QrCodeGeneration(encoded):
     # Create and save the png file naming "QRcode.png" 
     # Generate QR code 
     url = pyqrcode.create(encoded) 
-    #  The second parameter is the scale which represents the size of the QR Code
+
+    # The second parameter is the scale which represents the size of the QR Code
     QRCode=url.png('QRcode.png', scale = 4)
-    #dispalaying the QR Code
+
+    # Dispalaying the QR Code
     url.show()
     return url
 
 def QRCodeDecoding():
-    # reading the image QRcode.png that we created before
+    # Reading the image QRcode.png that we created before
     #
-    # read the QRCODE image
+    # Read the QRCODE image
     img = cv2.imread("QRcode.png")
     detector = cv2.QRCodeDetector()
     data, bbox, straight_qrcode = detector.detectAndDecode(img)
     return data
  
 
-#read the image 
+# Read the image 
 path='cablecar_2.bmp'
 image = Image.open(path)
 new_image = image.resize((16,16))
@@ -142,17 +137,23 @@ height, width = img_bw.shape # 512x480 = 245760
 encoded, rate = encode(img_bw, file_name='cablecar_compressed.txt', bits=15)
 print()
 print (f'Compression rate :{rate:.02f}%') # 1- 22927/245760 = 90.67%
-#le stockage du code obtenu après compression dans un code QR:
+
+# Storage of the code obtained after compression in a QR code:
 test= QrCodeGeneration(encoded)
 print()
-#Lecture du Code QR et obtenir le texte inséré:
-data=QRCodeDecoding()
+
+# Read the QR code and get the inserted text:
+code=QRCodeDecoding()
 print(QRCodeDecoding())
-#générer l’image correspondante.
-image = decode(height, width, data, bits=15)
+
+# Generate the corresponding image:
+data = decode(code)
+image = np.zeros((height, width)).astype(np.uint8)
+for k, (i, j) in enumerate(itertools.product(range(height), range(width))):image[i, j] = data[k]
 compressed_image = Image.fromarray(image, mode='L')
 compressed_image.show()
 compressed_image.save('decompressed.png')
+
 # This has to be equal to 0
 error_rate = np.count_nonzero(image - img_bw)
 print()
