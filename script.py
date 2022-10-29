@@ -8,7 +8,6 @@ import warnings
 import pyqrcode 
 import png
 from pyqrcode import QRCode 
-from pyzbar.pyzbar import decode
 import matplotlib.pylab as plt
 warnings.filterwarnings("ignore")
 
@@ -79,12 +78,8 @@ def encode(image, file_name='compressed_image.txt', bits=15):
     
     return hexa_encoded, rate
 
-def decode(height, width, file_name='compressed_image.txt', bits=15):
+def decode(height, width, code, bits=15):
 
-    # Read the entire code from the file
-    with open(file_name, "r") as file:
-        code = file.readlines()[0]
-        
     # Loop through the code and get the color of the pixels
     size = 2**(bits+1) - 2**bits 
     i = 0
@@ -114,24 +109,8 @@ def decode(height, width, file_name='compressed_image.txt', bits=15):
     return image
 
 
-def QrCodeGeneration(path):
-    #read the image 
-    image = Image.open(path)
-    new_image = image.resize((16,16))
-    new_image.save('SmallNewImage.png')
-    img_gray = cv2.imread('SmallNewImage.png', cv2.IMREAD_GRAYSCALE)
-    _, img_bw = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY)
-    cv2.imwrite('newImage.png', img_bw)
-    height, width = img_bw.shape # 512x480 = 245760
-    encoded, rate = encode(img_bw, file_name='cablecar_compressed.txt', bits=15)
-    print (f'Compression rate :{rate:.02f}%') # 1- 22927/245760 = 90.67%
-    image = decode(height, width, file_name='cablecar_compressed.txt', bits=15)
-    compressed_image = Image.fromarray(image, mode='L')
-    compressed_image.show()
-    compressed_image.save('decompressed.png')
-    # This has to be equal to 0
-    error_rate = np.count_nonzero(image - img_bw)
-    print (f'Error Rate: {error_rate}') 
+def QrCodeGeneration(encoded):
+    
     # Create and save the png file naming "QRcode.png" 
     # Generate QR code 
     url = pyqrcode.create(encoded) 
@@ -151,6 +130,31 @@ def QRCodeDecoding():
     return data
  
 
-
-test= QrCodeGeneration('/Users/sarahhaddad/Desktop/M1 /multi/myimage_500.bmp')
+#read the image 
+path='cablecar_2.bmp'
+image = Image.open(path)
+new_image = image.resize((16,16))
+new_image.save('SmallNewImage.png')
+img_gray = cv2.imread('SmallNewImage.png', cv2.IMREAD_GRAYSCALE)
+_, img_bw = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY)
+cv2.imwrite('newImage.png', img_bw)
+height, width = img_bw.shape # 512x480 = 245760
+encoded, rate = encode(img_bw, file_name='cablecar_compressed.txt', bits=15)
+print()
+print (f'Compression rate :{rate:.02f}%') # 1- 22927/245760 = 90.67%
+#le stockage du code obtenu après compression dans un code QR:
+test= QrCodeGeneration(encoded)
+print()
+#Lecture du Code QR et obtenir le texte inséré:
+data=QRCodeDecoding()
 print(QRCodeDecoding())
+#générer l’image correspondante.
+image = decode(height, width, data, bits=15)
+compressed_image = Image.fromarray(image, mode='L')
+compressed_image.show()
+compressed_image.save('decompressed.png')
+# This has to be equal to 0
+error_rate = np.count_nonzero(image - img_bw)
+print()
+print (f'Error Rate: {error_rate}') 
+print()
