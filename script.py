@@ -8,6 +8,8 @@ import warnings
 import pyqrcode 
 import png
 from pyqrcode import QRCode 
+from pyzbar.pyzbar import decode
+import matplotlib.pylab as plt
 warnings.filterwarnings("ignore")
 
 def encode(image, file_name='compressed_image.txt', bits=15):
@@ -112,32 +114,43 @@ def decode(height, width, file_name='compressed_image.txt', bits=15):
     return image
 
 
-def Qr(s):
+def QrCodeGeneration(path):
+    #read the image 
+    image = Image.open(path)
+    new_image = image.resize((16,16))
+    new_image.save('SmallNewImage.png')
+    img_gray = cv2.imread('SmallNewImage.png', cv2.IMREAD_GRAYSCALE)
+    _, img_bw = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY)
+    cv2.imwrite('newImage.png', img_bw)
+    height, width = img_bw.shape # 512x480 = 245760
+    encoded, rate = encode(img_bw, file_name='cablecar_compressed.txt', bits=15)
+    print (f'Compression rate :{rate:.02f}%') # 1- 22927/245760 = 90.67%
+    image = decode(height, width, file_name='cablecar_compressed.txt', bits=15)
+    compressed_image = Image.fromarray(image, mode='L')
+    compressed_image.show()
+    compressed_image.save('decompressed.png')
+    # This has to be equal to 0
+    error_rate = np.count_nonzero(image - img_bw)
+    print (f'Error Rate: {error_rate}') 
+    # Create and save the png file naming "QRcode.png" 
     # Generate QR code 
-    url = pyqrcode.create(s) 
+    url = pyqrcode.create(encoded) 
+    #  The second parameter is the scale which represents the size of the QR Code
+    QRCode=url.png('QRcode.png', scale = 4)
     #dispalaying the QR Code
     url.show()
     return url
 
+def QRCodeDecoding():
+    # reading the image QRcode.png that we created before
+    #
+    # read the QRCODE image
+    img = cv2.imread("QRcode.png")
+    detector = cv2.QRCodeDetector()
+    data, bbox, straight_qrcode = detector.detectAndDecode(img)
+    return data
+ 
 
 
-image = Image.open('/Users/sarahhaddad/Desktop/M1 /multi/Tp1/cablecar_2.bmp')
-new_image = image.resize((60, 60))
-new_image.save('myimage_500.bmp')
-img_gray = cv2.imread('myimage_500.bmp', cv2.IMREAD_GRAYSCALE)
-_, img_bw = cv2.threshold(img_gray, 100, 255, cv2.THRESH_BINARY)
-cv2.imwrite('cablecar_bi.png', img_bw)
-height, width = img_bw.shape # 512x480 = 245760
-encoded, rate = encode(img_bw, file_name='cablecar_compressed.txt', bits=15)
-print (f'Compression rate :{rate:.02f}%') # 1- 22927/245760 = 90.67%
-image = decode(height, width, file_name='cablecar_compressed.txt', bits=15)
-compressed_image = Image.fromarray(image, mode='L')
-compressed_image.show()
-compressed_image.save('cablecar_decompressed.png')
-# This has to be equal to 0
-error_rate = np.count_nonzero(image - img_bw)
-print (f'Error Rate: {error_rate}') 
-# Create and save the png file naming "QRcode.png" 
-#  The second parameter is the scale which represents the size of the QR Code
-Qr(encoded).png('QRcode.png', scale = 10)
-print(len(encoded))
+test= QrCodeGeneration('/Users/sarahhaddad/Desktop/M1 /multi/myimage_500.bmp')
+print(QRCodeDecoding())
